@@ -16,6 +16,7 @@ services:
       - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
+    restart: always
 
   backend:
     container_name: ideabucket-backend
@@ -32,6 +33,7 @@ services:
       - MONGODB_URL=${MONGODB_URL}
     depends_on:
       - mongodb
+    restart: always
 
   mongodb:
     container_name: ideabucket-mongodb
@@ -43,6 +45,7 @@ services:
       - "27018:27017"
     volumes:
       - mongodb_data:/data/db
+    restart: always
 
 volumes:
   mongodb_data:
