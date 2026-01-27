@@ -1,0 +1,29 @@
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+.venv
+venv/
+__pycache__/
+
+# Data & Media
+mongodb_data/
+*.sqlite3
+*.db
+/backend/data/
+/frontend/public/uploads/
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/
+
+# Build
+dist/
+build/
+*.py[cod]
+*$py.class

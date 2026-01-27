@@ -1,0 +1,8 @@
+{
+  "name": "Copy of MindCanvas AI",
+  "description": "An intelligent workspace to organize thoughts, images, and screenshots. Powered by Gemini, it automatically categorizes and connects your ideas into a visual knowledge graph.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
