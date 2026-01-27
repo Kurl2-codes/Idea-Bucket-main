@@ -194,9 +194,11 @@ const AdminDashboard: React.FC = () => {
                                     required
                                 >
                                     <option value="" disabled>Select Department</option>
-                                    {Array.from(new Set(users.map(u => u.department))).map(dept => (
-                                        <option key={dept} value={dept} className="bg-slate-900 text-white">{dept}</option>
-                                    ))}
+                                    <option value="AI Development" className="bg-slate-900 text-white">AI Development</option>
+                                    <option value="Design" className="bg-slate-900 text-white">Design</option>
+                                    <option value="Marketing" className="bg-slate-900 text-white">Marketing</option>
+                                    <option value="Web Development" className="bg-slate-900 text-white">Web Development</option>
+                                    <option value="IT Support" className="bg-slate-900 text-white">IT Support</option>
                                 </select>
                             </div>
                             <div>

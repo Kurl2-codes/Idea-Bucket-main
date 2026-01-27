@@ -9,6 +9,8 @@ import { useWorkspace } from './hooks/useWorkspace';
 
 
 const App: React.FC = () => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
   const {
     currentUser,
     handleAuthSuccess,
@@ -85,18 +87,21 @@ const App: React.FC = () => {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onLogout={handleLogout}
+        onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
       />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         <Sidebar
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          setActiveTab={(tab) => { setActiveTab(tab); setIsMobileMenuOpen(false); }}
           viewMode={viewMode}
           setViewMode={setViewMode}
           activeFilter={activeFilter}
           setActiveFilter={setActiveFilter}
           dynamicCategories={dynamicCategories}
           currentUser={currentUser}
+          isMobileMenuOpen={isMobileMenuOpen}
+          onCloseMobileMenu={() => setIsMobileMenuOpen(false)}
         />
 
         <WorkspaceView

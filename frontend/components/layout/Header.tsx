@@ -6,15 +6,22 @@ interface HeaderProps {
     searchQuery: string;
     setSearchQuery: (query: string) => void;
     onLogout: () => void;
+    onToggleMobileMenu: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, searchQuery, setSearchQuery, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, searchQuery, setSearchQuery, onLogout, onToggleMobileMenu }) => {
     if (!currentUser) return null;
 
     return (
-        <nav className="glass shrink-0 z-50 px-6 py-4 flex items-center justify-between border-b border-slate-800">
-            <div className="flex items-center space-x-2">
-                <img src="/ideabucket.png" alt="Idea Bucket Logo" className="w-16 h-16 object-contain group-hover:scale-105 transition-transform" />
+        <nav className="glass shrink-0 z-50 px-4 sm:px-6 py-4 flex items-center justify-between border-b border-slate-800">
+            <div className="flex items-center space-x-3">
+                <button
+                    onClick={onToggleMobileMenu}
+                    className="md:hidden text-slate-400 hover:text-white transition-colors p-1"
+                >
+                    <i className="fas fa-bars text-xl"></i>
+                </button>
+                <img src="/ideabucket.png" alt="Idea Bucket Logo" className="w-12 h-12 sm:w-16 sm:h-16 object-contain group-hover:scale-105 transition-transform" />
                 <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent hidden sm:block">
                     Idea <span className="text-[#fd7912]">Bucket</span>
                 </h1>
