@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 class IdeaAnalysisRequest(BaseModel):
+    id: Optional[str] = None
     content: str
     image_datas: Optional[List[str]] = []
     # User Info

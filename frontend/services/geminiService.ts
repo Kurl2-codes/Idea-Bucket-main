@@ -1,11 +1,12 @@
 import { User, IdeaAnalysis } from "../types";
 
-const API_URL = process.env.VITE_API_URL || "http://127.0.0.1:8000";
+const API_URL = process.env.VITE_API_URL || "";
 
 export const analyzeIdea = async (
   content: string,
   imageDatas: string[] = [],
-  user: User
+  user: User,
+  id?: string
 ): Promise<IdeaAnalysis> => {
   try {
     const response = await fetch(`${API_URL}/api/v1/gemini/analyze-idea`, {
@@ -14,6 +15,7 @@ export const analyzeIdea = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        id,
         content,
         image_datas: imageDatas || [],
         userId: user.id,

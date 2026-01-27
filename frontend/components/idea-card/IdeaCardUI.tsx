@@ -75,9 +75,9 @@ const IdeaCardUI: React.FC<IdeaCardUIProps> = ({
           {idea.title}
         </h3>
 
-        <p className="text-sm text-slate-400 mb-4 line-clamp-3">
+        <div className="text-sm text-slate-400 mb-4 line-clamp-3">
           <div dangerouslySetInnerHTML={{ __html: idea.content || '' }} className="rich-text-content" />
-        </p>
+        </div>
 
         <div className="mt-auto">
           <div className="flex flex-wrap gap-1.5 mb-4">

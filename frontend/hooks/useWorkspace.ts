@@ -363,7 +363,9 @@ export const useWorkspace = () => {
         setIsAnalyzing(true);
         try {
             const currentContent = editEditorRef.current?.innerHTML || editContent;
-            const analysis = await analyzeIdea(currentContent, editImages, currentUser);
+
+            // Pass the ID to perform an update instead of a new insert
+            const analysis = await analyzeIdea(currentContent, editImages, currentUser, previewIdea.id);
 
             const updatedIdea: Idea = {
                 ...previewIdea,
@@ -372,11 +374,9 @@ export const useWorkspace = () => {
                 title: analysis.title,
                 category: analysis.category,
                 tags: analysis.tags,
-                type: editImages.length > 0 ? 'image' : 'text'
+                type: editImages.length > 0 ? 'image' : 'text',
+                image_urls: analysis.image_urls // Keep updated S3 URLs
             };
-
-            // Persist to DB
-            await updateIdea(previewIdea.id, updatedIdea.content, updatedIdea.title, updatedIdea.category, updatedIdea.tags);
 
             setIdeas(prev => prev.map(i => i.id === previewIdea.id ? updatedIdea : i));
             setPreviewIdea(updatedIdea);

@@ -20,7 +20,7 @@ async def analyze_idea(request: IdeaAnalysisRequest):
     image_urls = []
     if request.image_datas:
         for idx, img_data in enumerate(request.image_datas):
-            filename = f"idea_{int(time.time())}_{idx}.png"
+            filename = f"ideas/idea_{int(time.time())}_{idx}.png"
             url = s3_service.upload_base64_image(img_data, filename)
             if url:
                 image_urls.append(url)
@@ -42,10 +42,28 @@ async def analyze_idea(request: IdeaAnalysisRequest):
     # 4. Save to MongoDB
     db = await get_database()
     if db is not None:
-        await db.ideas.insert_one(result_dict)
-        # Ensure _id is a string for the response and mapped to 'id'
-        if "_id" in result_dict:
-            result_dict["id"] = str(result_dict["_id"])
+        from bson import ObjectId
+        
+        if request.id:
+            # UPSERT logic: update existing idea
+            print(f"DEBUG: Attempting to update existing idea in MongoDB: {request.id}")
+            query = {"_id": ObjectId(request.id) if ObjectId.is_valid(request.id) else request.id}
+            
+            # Don't overwrite createdAt on update
+            update_payload = {k: v for k, v in result_dict.items() if k != "createdAt"}
+            
+            await db.ideas.update_one(query, {"$set": update_payload})
+            result_dict["id"] = str(request.id)
+            print(f"SUCCESS: Idea {request.id} updated")
+        else:
+            # Traditional logic: insert new idea
+            print(f"DEBUG: Attempting to insert new idea into MongoDB: {result_dict.get('title')}")
+            res = await db.ideas.insert_one(result_dict)
+            print(f"SUCCESS: Idea inserted with ID: {res.inserted_id}")
+            if "_id" in result_dict:
+                result_dict["id"] = str(result_dict["_id"])
+    else:
+        print("ERROR: Database connection missing during analyze_idea!")
         
     return result_dict
 
@@ -66,15 +84,15 @@ async def get_ideas(current_user: dict = Depends(get_current_user)):
         ]
     }
     
+    print(f"DEBUG: get_ideas query for user {current_user['id']}: {query}")
     cursor = db.ideas.find(query).sort("_id", -1)
     ideas = await cursor.to_list(length=100)
     
     # Manually convert ObjectId to str for Pydantic serialization
-    print(f"DEBUG get_ideas: Found {len(ideas)} ideas for user {current_user['id']}")
+    print(f"DEBUG: get_ideas found {len(ideas)} ideas")
     for idea in ideas:
         if "_id" in idea:
              idea["id"] = str(idea["_id"])
-        print(f"DEBUG idea {idea.get('id')}: {len(idea.get('comments', []))} comments")
              
     return ideas
 
@@ -150,16 +168,17 @@ async def add_comment(idea_id: str, comment: CommentCreate, current_user: dict =
     }
     
     # 3. Update Idea Document
+    print(f"DEBUG: Attempting to add comment to idea {idea_id} for user {current_user['id']}")
     result = await db.ideas.update_one(
         {"_id": idea["_id"]},
         {"$push": {"comments": new_comment}}
     )
     
     if result.modified_count == 0:
-        print(f"DEBUG add_comment FAIL: Idea {idea['_id']} not updated")
+        print(f"ERROR: add_comment FAIL: Idea {idea['_id']} not updated (modified_count=0)")
         raise HTTPException(status_code=500, detail="Failed to add comment to database")
 
-    print(f"DEBUG add_comment SUCCESS: pushed to {idea['_id']}, text={comment.text}")
+    print(f"SUCCESS: add_comment: pushed to {idea['_id']}, text={comment.text}")
     return new_comment
 
 
@@ -210,14 +229,17 @@ async def add_reply(idea_id: str, comment_id: str, reply: CommentCreate, current
          print(f"DEBUG add_reply FAIL: Comment {comment_id} not found in idea {idea['_id']}")
          raise HTTPException(status_code=404, detail="Parent comment not found")
 
+    print(f"DEBUG: Attempting to add reply to comment {comment_id} in idea {idea_id}")
     result = await db.ideas.update_one(
         {"_id": idea["_id"]},
         {"$push": {f"comments.{root_comment_index}.replies": new_reply}}
     )
     
     if result.modified_count == 0:
+        print(f"ERROR: add_reply FAIL: Idea {idea['_id']} not updated (modified_count=0)")
         raise HTTPException(status_code=500, detail="Failed to add reply to database")
 
+    print(f"SUCCESS: add_reply: pushed to {idea['_id']}, comment_id={comment_id}")
     return new_reply
 
 

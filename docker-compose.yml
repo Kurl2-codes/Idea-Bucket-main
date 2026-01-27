@@ -37,7 +37,7 @@ services:
     image: mongo:latest
 
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - mongodb_data:/data/db
 

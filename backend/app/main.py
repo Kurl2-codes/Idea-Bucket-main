@@ -3,14 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.routers import gemini, auth, images
 from contextlib import asynccontextmanager
-from app.db.mongodb import db
+from app.db.mongodb import db_instance, get_database
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure MongoDB indexes, etc could go here
-    await db.connect_to_database()
+    print("DEBUG: Lifespan starting...")
+    await db_instance.connect_to_database()
     yield
-    await db.close_database_connection()
+    await db_instance.close_database_connection()
+    print("DEBUG: Lifespan ending...")
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
@@ -33,4 +34,9 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    db = await get_database()
+    return {
+        "status": "healthy",
+        "database": "connected" if db is not None else "disconnected",
+        "project": settings.PROJECT_NAME
+    }
