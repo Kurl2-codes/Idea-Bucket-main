@@ -44,14 +44,6 @@ export const analyzeIdea = async (
 };
 
 const getAuthHeader = () => {
-  // Assuming token is stored in localStorage by AuthScreen component
-  // We need to fetch it dynamically. 
-  // Ideally this service should receive the token, but for now lets rely on localStorage "authToken"
-  // which usually Auth packages set. 
-  // Based on previous code, let's look at AuthScreen or assume we need to manage it.
-  // Wait, App.tsx manages user state but maybe not persistent token storage yet?
-  // Let's assume we need to pass token or get it. 
-  // For simplicity, let's assume App.tsx saves it to localStorage "token" when logging in.
   const token = localStorage.getItem('token');
   return token ? { "Authorization": `Bearer ${token}` } : {};
 };

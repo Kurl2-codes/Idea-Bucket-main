@@ -23,4 +23,4 @@ class MongoDB:
 db_instance = MongoDB()
 
 async def get_database():
-    return db.db
+    return db_instance.db

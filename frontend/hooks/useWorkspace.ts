@@ -28,29 +28,28 @@ export const useWorkspace = () => {
     const [isSharePopoverOpen, setIsSharePopoverOpen] = useState(false);
     const [linkCopied, setLinkCopied] = useState(false);
 
-    // 1. Initial Load Effect (Run ONCE)
+    // Initial Load Effect
     useEffect(() => {
-        // Legacy: Clear old local storage to stop confusion
+        // Clear legacy storage
         localStorage.removeItem('workflow_ideas_v3');
 
         const savedUserStr = localStorage.getItem('workflow_user');
         if (savedUserStr) {
             try {
                 const user = JSON.parse(savedUserStr);
-                // Only set if actually different to avoid trivial re-renders
                 setCurrentUser(user);
             } catch (e) { console.error(e); }
         }
 
-        // Check for shareable link in URL
+        // Check for shareable link
         const urlParams = new URLSearchParams(window.location.search);
         const sId = urlParams.get('shareId');
         if (sId) {
-            (window as any)._pendingShareId = sId; // Stashing globally for the fetch effect
+            (window as any)._pendingShareId = sId;
         }
     }, []);
 
-    // 2. Data Fetching Effect (Run when currentUser changes)
+    // Data Fetching
     useEffect(() => {
         const fetchIdeas = async () => {
             if (currentUser) {
@@ -73,7 +72,7 @@ export const useWorkspace = () => {
                     shareLinkId: analysis.shareLinkId,
                     sharePermission: analysis.sharePermission as SharePermission | undefined
                 }));
-                // Only update if ideas actually changed (deep check hard, but length check simple)
+
                 setIdeas(mappedIdeas);
 
                 const pendingId = (window as any)._pendingShareId;
@@ -82,7 +81,7 @@ export const useWorkspace = () => {
                     if (sharedIdea) {
                         setPreviewIdea(sharedIdea);
 
-                        // Google Sheets-style: Auto-open editor if user has edit access
+                        // Auto-open editor if user has permission
                         if (sharedIdea.userId === currentUser.id || sharedIdea.sharePermission === 'editor') {
                             setIsEditing(true);
                             setEditContent(sharedIdea.content);
@@ -90,8 +89,6 @@ export const useWorkspace = () => {
                         }
 
                         delete (window as any)._pendingShareId;
-
-                        // Optional: Clean up URL to keep it pretty
                         window.history.replaceState({}, document.title, window.location.pathname);
                     }
                 }

@@ -6,11 +6,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8000
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     env_file:
       - .env
     environment:
@@ -29,13 +28,17 @@ services:
       - ./backend:/app
     env_file:
       - .env
+    environment:
+      - MONGODB_URL=${MONGODB_URL}
     depends_on:
       - mongodb
 
   mongodb:
     container_name: ideabucket-mongodb
     image: mongo:latest
-
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
     ports:
       - "27018:27017"
     volumes:

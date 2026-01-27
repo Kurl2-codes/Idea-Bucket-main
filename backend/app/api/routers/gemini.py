@@ -10,10 +10,9 @@ router = APIRouter()
 
 @router.post("/analyze-idea", response_model=IdeaAnalysisResponse)
 async def analyze_idea(request: IdeaAnalysisRequest):
-    # 1. Analyze with Gemini
     result = await gemini_service.analyze_idea(request.content, request.image_datas)
     
-    # 2. Upload Images to S3 if any
+    # Upload images to S3
     from app.services.s3_service import s3_service
     import time
     
@@ -25,41 +24,35 @@ async def analyze_idea(request: IdeaAnalysisRequest):
             if url:
                 image_urls.append(url)
     
-    # 3. Add URLs to result
     result_dict = result.dict() if hasattr(result, 'dict') else result
     result_dict["image_urls"] = image_urls
     result_dict["content"] = request.content
     
-    # Save Author Info
     result_dict["userId"] = request.userId
     result_dict["authorName"] = request.authorName
     result_dict["authorDepartment"] = request.authorDepartment
     result_dict["isShared"] = False
-    result_dict["createdAt"] = time.time() * 1000 # JS compatible
+    result_dict["createdAt"] = time.time() * 1000 
     
     print(f"DEBUG: Image URLs generated: {image_urls}")
 
-    # 4. Save to MongoDB
     db = await get_database()
     if db is not None:
         from bson import ObjectId
         
         if request.id:
-            # UPSERT logic: update existing idea
-            print(f"DEBUG: Attempting to update existing idea in MongoDB: {request.id}")
+            # Update existing idea
+            print(f"DEBUG: Updating idea: {request.id}")
             query = {"_id": ObjectId(request.id) if ObjectId.is_valid(request.id) else request.id}
             
-            # Don't overwrite createdAt on update
             update_payload = {k: v for k, v in result_dict.items() if k != "createdAt"}
             
             await db.ideas.update_one(query, {"$set": update_payload})
             result_dict["id"] = str(request.id)
-            print(f"SUCCESS: Idea {request.id} updated")
         else:
-            # Traditional logic: insert new idea
-            print(f"DEBUG: Attempting to insert new idea into MongoDB: {result_dict.get('title')}")
+            # Insert new idea
+            print(f"DEBUG: Inserting idea: {result_dict.get('title')}")
             res = await db.ideas.insert_one(result_dict)
-            print(f"SUCCESS: Idea inserted with ID: {res.inserted_id}")
             if "_id" in result_dict:
                 result_dict["id"] = str(result_dict["_id"])
     else:
