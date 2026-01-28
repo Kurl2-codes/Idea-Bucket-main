@@ -365,8 +365,11 @@ export const useWorkspace = () => {
             if (viewMode === 'mine' && !isMine) return false;
             if (viewMode === 'shared' && !isSharedWithMe) return false;
 
-            const matchesSearch = idea.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                idea.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+            const query = searchQuery.toLowerCase();
+            const matchesSearch = idea.title.toLowerCase().includes(query) ||
+                (idea.content && idea.content.toLowerCase().includes(query)) ||
+                idea.tags.some(t => t.toLowerCase().includes(query)) ||
+                idea.category.toLowerCase().includes(query);
 
             const matchesCat = !activeFilter || idea.category === activeFilter;
 

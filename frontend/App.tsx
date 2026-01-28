@@ -107,6 +107,7 @@ const App: React.FC = () => {
         <WorkspaceView
           activeTab={activeTab}
           viewMode={viewMode}
+          searchQuery={searchQuery}
           visibleIdeas={visibleIdeas}
           ideas={ideas}
           isAnalyzing={isAnalyzing}
