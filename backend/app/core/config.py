@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # Gemini
     GEMINI_API_KEY: str
-    SECRET_KEY: str = "your-secret-key-keep-it-secret"
+    SECRET_KEY: str
     
     CORS_ORIGINS: str = "*"
 
