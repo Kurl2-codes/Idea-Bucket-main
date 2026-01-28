@@ -1,6 +1,7 @@
 import React from 'react';
 import IdeaInput from '../idea-input/IdeaInput';
 import IdeaCard from '../idea-card/IdeaCard';
+import AuditLogTable from '../admin/AuditLogTable';
 import AdminDashboard from '../admin/AdminDashboard';
 import { Idea, MainTab, ViewMode } from '../../types';
 

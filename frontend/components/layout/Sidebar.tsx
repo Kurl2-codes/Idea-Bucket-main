@@ -55,14 +55,24 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </button>
                     </li>
                     {currentUser.userLevel === 1 && (
-                        <li>
-                            <button
-                                onClick={() => setActiveTab('admin')}
-                                className={`w-full text-left px-4 py-3 rounded-xl transition-all text-sm font-bold flex items-center ${activeTab === 'admin' ? 'bg-[#fd7912] text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
-                            >
-                                <i className="fas fa-users-cog mr-3"></i> User Management
-                            </button>
-                        </li>
+                        <>
+                            <li>
+                                <button
+                                    onClick={() => setActiveTab('admin')}
+                                    className={`w-full text-left px-4 py-3 rounded-xl transition-all text-sm font-bold flex items-center ${activeTab === 'admin' ? 'bg-[#fd7912] text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                                >
+                                    <i className="fas fa-users-cog mr-3"></i> User Management
+                                </button>
+                            </li>
+                            <li>
+                                <button
+                                    onClick={() => setActiveTab('audit')}
+                                    className={`w-full text-left px-4 py-3 rounded-xl transition-all text-sm font-bold flex items-center ${activeTab === 'audit' ? 'bg-[#fd7912] text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                                >
+                                    <i className="fas fa-history mr-3"></i> Audit Logs
+                                </button>
+                            </li>
+                        </>
                     )}
                 </ul>
             </section>

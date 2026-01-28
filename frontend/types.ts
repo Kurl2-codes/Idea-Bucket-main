@@ -55,5 +55,5 @@ export interface User {
 
 
 export type ViewMode = 'all' | 'mine' | 'shared';
-export type MainTab = 'capture' | 'workspace' | 'admin';
+export type MainTab = 'capture' | 'workspace' | 'admin' | 'audit';
 

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api.routers import gemini, auth, images
+from app.api.routers import gemini, auth, images, audit
 from contextlib import asynccontextmanager
 from app.db.mongodb import db_instance, get_database
 import redis.asyncio as redis
@@ -52,6 +52,7 @@ app.add_middleware(
 app.include_router(gemini.router, prefix="/api/v1/gemini", tags=["gemini"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
+app.include_router(audit.router, prefix="/api/v1/audit", tags=["audit"])
 
 @app.get("/")
 async def root():
