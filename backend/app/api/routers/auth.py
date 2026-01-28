@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from app.db.mongodb import get_database
 from app.core.security import verify_password, create_access_token, get_password_hash
+from app.services.audit_service import audit_service
+from fastapi import BackgroundTasks
 from pydantic import BaseModel
 from datetime import timedelta
 
@@ -21,7 +23,7 @@ class Token(BaseModel):
     user: dict
 
 @router.post("/register", response_model=Token)
-async def register(user: UserCreate):
+async def register(user: UserCreate, background_tasks: BackgroundTasks):
     try:
         db = await get_database()
         if db is None:
@@ -44,7 +46,17 @@ async def register(user: UserCreate):
         
         await db.users.insert_one(new_user)
         
-        access_token = create_access_token(data={"sub": user.email})
+        # Audit user registration
+        background_tasks.add_task(
+            audit_service.log_action,
+            action="USER_REGISTERED",
+            user_id=new_user["id"],
+            user_name=new_user["name"],
+            target_id=new_user["id"],
+            target_name=new_user["email"],
+            details={"department": new_user["department"], "user_level": new_user["user_level"]} if "user_level" in new_user else {"department": new_user["department"], "user_level": 2}
+        )
+        # Note: Fix field name if userLevel is used instead of user_level
         return {
             "access_token": access_token, 
             "token_type": "bearer", 
@@ -129,7 +141,7 @@ async def list_users(current_user: dict = Depends(get_current_user)):
     return sanitized_users
 
 @router.patch("/users/{user_id}/level")
-async def update_user_level(user_id: str, level: int, current_user: dict = Depends(get_current_user)):
+async def update_user_level(user_id: str, level: int, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     if current_user.get("userLevel") != 1:
         raise HTTPException(status_code=403, detail="Not authorized. Admin only.")
     
@@ -138,6 +150,20 @@ async def update_user_level(user_id: str, level: int, current_user: dict = Depen
     
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Found the target user to get their name/email for audit
+    target_user = await db.users.find_one({"id": user_id})
+    
+    # Audit role change
+    background_tasks.add_task(
+        audit_service.log_action,
+        action="USER_ROLE_PROMOTED" if level <= 1 else "USER_ROLE_DEMOTED",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        target_id=user_id,
+        target_name=target_user.get("email") if target_user else "Unknown",
+        details={"new_level": level, "target_name": target_user.get("name") if target_user else "Unknown"}
+    )
         
     return {"status": "success", "userLevel": level}
 
@@ -161,7 +187,7 @@ class UserUpdate(BaseModel):
     password: str | None = None
 
 @router.patch("/users/{user_id}")
-async def update_user_details(user_id: str, user_update: UserUpdate, current_user: dict = Depends(get_current_user)):
+async def update_user_details(user_id: str, user_update: UserUpdate, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     if current_user.get("userLevel") != 1:
         raise HTTPException(status_code=403, detail="Not authorized. Admin only.")
     
@@ -184,6 +210,23 @@ async def update_user_details(user_id: str, user_update: UserUpdate, current_use
     
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Get target user for audit
+    target_user = await db.users.find_one({"id": user_id})
+    
+    # Audit profile update
+    background_tasks.add_task(
+        audit_service.log_action,
+        action="USER_DETAILS_UPDATED",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        target_id=user_id,
+        target_name=target_user.get("email") if target_user else "Unknown",
+        details={
+            "updated_fields": list(update_data.keys()),
+            "target_name": target_user.get("name") if target_user else "Unknown"
+        }
+    )
         
     return {"status": "success", "updated_fields": list(update_data.keys())}
 

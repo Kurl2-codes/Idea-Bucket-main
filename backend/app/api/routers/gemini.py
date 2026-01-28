@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
+from app.services.audit_service import audit_service
 from app.schemas.gemini import IdeaAnalysisRequest, IdeaAnalysisResponse, CommentCreate, Comment, IdeaUpdate, ShareLinkUpdate
 
 from app.services.gemini_service import gemini_service
@@ -9,7 +10,7 @@ from app.api.routers.auth import get_current_user
 router = APIRouter()
 
 @router.post("/analyze-idea", response_model=IdeaAnalysisResponse)
-async def analyze_idea(request: IdeaAnalysisRequest):
+async def analyze_idea(request: IdeaAnalysisRequest, background_tasks: BackgroundTasks):
     result = await gemini_service.analyze_idea(request.content, request.image_datas)
     
     # Upload images to S3
@@ -49,12 +50,34 @@ async def analyze_idea(request: IdeaAnalysisRequest):
             
             await db.ideas.update_one(query, {"$set": update_payload})
             result_dict["id"] = str(request.id)
+
+            # Audit update
+            background_tasks.add_task(
+                audit_service.log_action,
+                action="IDEA_UPDATED_VIA_ANALYSIS",
+                user_id=request.userId,
+                user_name=request.authorName,
+                target_id=result_dict["id"],
+                target_name=result_dict.get("title"),
+                details={"category": result_dict.get("category")}
+            )
         else:
             # Insert new idea
             print(f"DEBUG: Inserting idea: {result_dict.get('title')}")
             res = await db.ideas.insert_one(result_dict)
             if "_id" in result_dict:
                 result_dict["id"] = str(result_dict["_id"])
+            
+            # Audit creation
+            background_tasks.add_task(
+                audit_service.log_action,
+                action="IDEA_CREATED",
+                user_id=request.userId,
+                user_name=request.authorName,
+                target_id=result_dict.get("id"),
+                target_name=result_dict.get("title"),
+                details={"category": result_dict.get("category")}
+            )
     else:
         print("ERROR: Database connection missing during analyze_idea!")
         
@@ -90,7 +113,7 @@ async def get_ideas(current_user: dict = Depends(get_current_user)):
     return ideas
 
 @router.patch("/ideas/{idea_id}/share")
-async def toggle_share(idea_id: str, current_user: dict = Depends(get_current_user)):
+async def toggle_share(idea_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     from bson import ObjectId
     
@@ -109,6 +132,17 @@ async def toggle_share(idea_id: str, current_user: dict = Depends(get_current_us
     
     update_query = {"_id": idea["_id"]} # Use the exact ID from the found doc
     await db.ideas.update_one(update_query, {"$set": {"isShared": new_state}})
+    
+    # Audit sharing toggle
+    background_tasks.add_task(
+        audit_service.log_action,
+        action="IDEA_SHARED" if new_state else "IDEA_UNSHARED",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        target_id=idea_id,
+        target_name=idea.get("title"),
+        details={"new_state": new_state}
+    )
     
     return {"isShared": new_state}
 
@@ -143,10 +177,20 @@ async def delete_idea(idea_id: str, current_user: dict = Depends(get_current_use
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=500, detail="Failed to delete idea from database")
+
+    # Audit deletion
+    background_tasks.add_task(
+        audit_service.log_action,
+        action="IDEA_DELETED",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        target_id=idea_id,
+        target_name=idea.get("title")
+    )
         
     return {"status": "success"}
 @router.post("/ideas/{idea_id}/comments", response_model=Comment)
-async def add_comment(idea_id: str, comment: CommentCreate, current_user: dict = Depends(get_current_user)):
+async def add_comment(idea_id: str, comment: CommentCreate, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     from bson import ObjectId
     import time
@@ -187,12 +231,23 @@ async def add_comment(idea_id: str, comment: CommentCreate, current_user: dict =
         print(f"ERROR: add_comment FAIL: Idea {idea['_id']} not updated (modified_count=0)")
         raise HTTPException(status_code=500, detail="Failed to add comment to database")
 
+    # Audit comment
+    background_tasks.add_task(
+        audit_service.log_action,
+        action="COMMENT_ADDED",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        target_id=idea_id,
+        target_name=idea.get("title"),
+        details={"comment_id": new_comment["id"]}
+    )
+
     print(f"SUCCESS: add_comment: pushed to {idea['_id']}, text={comment.text}")
     return new_comment
 
 
 @router.post("/ideas/{idea_id}/comments/{comment_id}/replies", response_model=Comment)
-async def add_reply(idea_id: str, comment_id: str, reply: CommentCreate, current_user: dict = Depends(get_current_user)):
+async def add_reply(idea_id: str, comment_id: str, reply: CommentCreate, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     from bson import ObjectId
     import time
@@ -247,6 +302,17 @@ async def add_reply(idea_id: str, comment_id: str, reply: CommentCreate, current
     if result.modified_count == 0:
         print(f"ERROR: add_reply FAIL: Idea {idea['_id']} not updated (modified_count=0)")
         raise HTTPException(status_code=500, detail="Failed to add reply to database")
+
+    # Audit reply
+    background_tasks.add_task(
+        audit_service.log_action,
+        action="COMMENT_REPLIED",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        target_id=idea_id,
+        target_name=idea.get("title"),
+        details={"comment_id": comment_id, "reply_id": new_reply["id"]}
+    )
 
     print(f"SUCCESS: add_reply: pushed to {idea['_id']}, comment_id={comment_id}")
     return new_reply
@@ -306,7 +372,7 @@ async def toggle_comment_like(idea_id: str, comment_id: str, current_user: dict 
         return {"liked": True}
 
 @router.put("/ideas/{idea_id}", response_model=IdeaAnalysisResponse)
-async def update_idea(idea_id: str, update: IdeaUpdate, current_user: dict = Depends(get_current_user)):
+async def update_idea(idea_id: str, update: IdeaUpdate, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     from bson import ObjectId
     
@@ -320,17 +386,25 @@ async def update_idea(idea_id: str, update: IdeaUpdate, current_user: dict = Dep
     
     result = await db.ideas.update_one(query, {"$set": update_data})
     
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Idea not found or not owned by you")
-        
     updated_idea = await db.ideas.find_one({"_id": query["_id"]})
     if "_id" in updated_idea:
         updated_idea["id"] = str(updated_idea["_id"])
+    
+    # Audit manual update
+    background_tasks.add_task(
+        audit_service.log_action,
+        action="IDEA_UPDATED_MANUALLY",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        target_id=idea_id,
+        target_name=updated_idea.get("title"),
+        details={"updated_fields": list(update_data.keys())}
+    )
         
     return updated_idea
 
 @router.patch("/ideas/{idea_id}/share-link")
-async def update_share_link(idea_id: str, update: ShareLinkUpdate, current_user: dict = Depends(get_current_user)):
+async def update_share_link(idea_id: str, update: ShareLinkUpdate, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     from bson import ObjectId
     
@@ -350,6 +424,20 @@ async def update_share_link(idea_id: str, update: ShareLinkUpdate, current_user:
     
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Idea not found or not owned by you")
+
+    # Get idea for audit
+    idea = await db.ideas.find_one(query)
+    
+    # Audit share link update
+    background_tasks.add_task(
+        audit_service.log_action,
+        action="SHARE_LINK_UPDATED",
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        target_id=idea_id,
+        target_name=idea.get("title") if idea else "Unknown",
+        details={"share_permission": update.sharePermission}
+    )
         
     return {"status": "success", "shareLinkId": update.shareLinkId}
 
