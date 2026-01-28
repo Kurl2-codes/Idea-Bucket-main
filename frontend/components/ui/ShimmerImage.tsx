@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 interface ShimmerImageProps {
@@ -8,23 +7,18 @@ interface ShimmerImageProps {
     containerClassName?: string;
 }
 
-const ShimmerImage: React.FC<ShimmerImageProps> = ({
-    src,
-    alt,
-    className = "",
-    containerClassName = ""
-}) => {
+const ShimmerImage: React.FC<ShimmerImageProps> = ({ src, alt, className = "", containerClassName = "" }) => {
     const [isLoaded, setIsLoaded] = useState(false);
 
     return (
-        <div className={`relative ${containerClassName}`}>
+        <div className={`relative w-full h-full ${containerClassName}`}>
             {!isLoaded && (
                 <div className="absolute inset-0 shimmer bg-slate-800 rounded-lg" />
             )}
             <img
                 src={src}
                 alt={alt}
-                className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-300`}
+                className={`${className} ${isLoaded ? 'opacity-100' : 'opacity-0'} transition-opacity duration-500`}
                 onLoad={() => setIsLoaded(true)}
             />
         </div>

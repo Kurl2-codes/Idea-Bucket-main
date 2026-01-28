@@ -1,5 +1,6 @@
 
 import React, { RefObject } from 'react';
+import ShimmerImage from '../ui/ShimmerImage';
 
 interface IdeaInputUIProps {
   isAnalyzing: boolean;
@@ -39,10 +40,9 @@ const IdeaInputUI: React.FC<IdeaInputUIProps> = ({
   onExecCommand
 }) => {
   return (
-    <div 
-      className={`glass rounded-2xl p-6 shadow-2xl mb-8 transition-all border-2 ${
-        isDragging ? 'border-[#fd7912] bg-[#fd7912]/10' : 'border-transparent hover:border-[#fd7912]/30'
-      }`}
+    <div
+      className={`glass rounded-2xl p-6 shadow-2xl mb-8 transition-all border-2 ${isDragging ? 'border-[#fd7912] bg-[#fd7912]/10' : 'border-transparent hover:border-[#fd7912]/30'
+        }`}
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
@@ -79,17 +79,16 @@ const IdeaInputUI: React.FC<IdeaInputUIProps> = ({
             </button>
           </div>
 
-          <div 
+          <div
             ref={editorRef}
             contentEditable
             onPaste={onPaste}
             onInput={onInput}
             data-placeholder="A text description is required to capture your idea. Start typing or paste content..."
-            className={`w-full bg-slate-900/50 text-slate-100 rounded-b-xl p-4 min-h-[150px] focus:ring-2 outline-none border transition-all overflow-y-auto rich-editor ${
-              hasText ? 'focus:ring-[#fd7912] border-slate-700' : 'focus:ring-red-500/50 border-red-900/30'
-            }`}
+            className={`w-full bg-slate-900/50 text-slate-100 rounded-b-xl p-4 min-h-[150px] focus:ring-2 outline-none border transition-all overflow-y-auto rich-editor ${hasText ? 'focus:ring-[#fd7912] border-slate-700' : 'focus:ring-red-500/50 border-red-900/30'
+              }`}
           />
-          
+
           <style>{`
             .rich-editor:empty:before {
               content: attr(data-placeholder);
@@ -101,12 +100,12 @@ const IdeaInputUI: React.FC<IdeaInputUIProps> = ({
             .rich-editor ul { list-style-type: disc; padding-left: 1.5rem; }
             .rich-editor b, .rich-editor strong { font-weight: 700; color: white; }
           `}</style>
-          
+
           {previews.length > 0 && (
             <div className="flex flex-wrap gap-3">
               {previews.map((src, index) => (
                 <div key={index} className="relative group w-24 h-24">
-                  <img src={src} alt={`Preview ${index}`} className="rounded-lg border border-slate-600 shadow-lg object-cover w-full h-full" />
+                  <ShimmerImage src={src} alt={`Preview ${index}`} className="rounded-lg border border-slate-600 shadow-lg object-cover w-full h-full" />
                   <button
                     type="button"
                     onClick={() => onRemovePreview(index)}
@@ -138,15 +137,14 @@ const IdeaInputUI: React.FC<IdeaInputUIProps> = ({
                 className="hidden"
               />
             </div>
-            
+
             <button
               type="submit"
               disabled={isAnalyzing || !hasText}
-              className={`flex items-center space-x-2 px-6 py-2 text-white font-semibold rounded-lg shadow-lg transition-all transform ${
-                !hasText || isAnalyzing 
-                  ? 'bg-slate-700 cursor-not-allowed opacity-50' 
-                  : 'bg-[#fd7912] hover:bg-[#fd7912]/80 shadow-[#fd7912]/20 hover:-translate-y-0.5'
-              }`}
+              className={`flex items-center space-x-2 px-6 py-2 text-white font-semibold rounded-lg shadow-lg transition-all transform ${!hasText || isAnalyzing
+                ? 'bg-slate-700 cursor-not-allowed opacity-50'
+                : 'bg-[#fd7912] hover:bg-[#fd7912]/80 shadow-[#fd7912]/20 hover:-translate-y-0.5'
+                }`}
             >
               {isAnalyzing ? (
                 <>
