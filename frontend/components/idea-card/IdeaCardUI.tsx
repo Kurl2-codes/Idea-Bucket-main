@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Idea } from '../../types';
+import ShimmerImage from '../ui/ShimmerImage';
 
 interface IdeaCardUIProps {
   idea: Idea;
@@ -30,7 +31,7 @@ const IdeaCardUI: React.FC<IdeaCardUIProps> = ({
     >
       {displayImage && (
         <div className="relative h-48 overflow-hidden bg-slate-900">
-          <img
+          <ShimmerImage
             src={displayImage}
             alt={idea.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"

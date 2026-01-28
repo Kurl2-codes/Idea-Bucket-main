@@ -3,6 +3,7 @@ import React from 'react';
 import { Idea, User, SharePermission, Comment } from '../../types';
 import { ImageSlideshow } from '../ui/ImageSlideshow';
 import { CommentItem } from '../ui/CommentItem';
+import ShimmerImage from '../ui/ShimmerImage';
 
 interface IdeaPreviewModalProps {
     previewIdea: Idea;
@@ -219,7 +220,7 @@ const IdeaPreviewModal: React.FC<IdeaPreviewModalProps> = ({
                                     <div className="flex flex-wrap gap-4">
                                         {editImages.map((src, idx) => (
                                             <div key={idx} className="relative group w-32 h-32">
-                                                <img src={src} className="rounded-xl object-cover w-full h-full border border-slate-700" alt={`Edit ${idx}`} />
+                                                <ShimmerImage src={src} className="rounded-xl object-cover w-full h-full border border-slate-700" alt={`Edit ${idx}`} />
                                                 <button
                                                     onClick={() => setEditImages(prev => prev.filter((_, i) => i !== idx))}
                                                     className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white shadow-xl opacity-0 group-hover:opacity-100 transition-opacity"

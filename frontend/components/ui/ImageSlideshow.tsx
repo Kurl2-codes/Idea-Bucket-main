@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ShimmerImage from './ShimmerImage';
 
 export const ImageSlideshow: React.FC<{ images: string[] }> = ({ images }) => {
     const [index, setIndex] = useState(0);
@@ -16,7 +17,7 @@ export const ImageSlideshow: React.FC<{ images: string[] }> = ({ images }) => {
 
     return (
         <div className="relative rounded-[2rem] overflow-hidden border border-slate-800 shadow-2xl bg-slate-900 group aspect-video flex items-center justify-center">
-            <img
+            <ShimmerImage
                 src={images[index]}
                 alt={`Image ${index + 1}`}
                 className="max-w-full max-h-full object-contain transition-all duration-500"
