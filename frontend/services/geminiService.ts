@@ -201,3 +201,22 @@ export const updateShareLink = async (
   }
 };
 
+export const getProfile = async (): Promise<User> => {
+  try {
+    const response = await fetch(`${API_URL}/api/v1/auth/me`, {
+      headers: {
+        ...getAuthHeader()
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch profile");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Get profile failed:", error);
+    throw error;
+  }
+};
+

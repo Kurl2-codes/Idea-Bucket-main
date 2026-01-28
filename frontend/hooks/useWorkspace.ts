@@ -1,16 +1,25 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Idea, User, ViewMode, MainTab, Comment, SharePermission } from '../types';
-import { analyzeIdea, getIdeas, toggleShare, deleteIdea, addComment, addReply, toggleCommentLike, updateIdea, updateShareLink } from '../services/geminiService';
+import { analyzeIdea, getIdeas, toggleShare, deleteIdea, addComment, addReply, toggleCommentLike, updateIdea, updateShareLink, getProfile } from '../services/geminiService';
 
 export const useWorkspace = () => {
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(() => {
+        const saved = localStorage.getItem('workflow_user');
+        if (saved) {
+            try { return JSON.parse(saved); } catch (e) { return null; }
+        }
+        return null;
+    });
     const [ideas, setIdeas] = useState<Idea[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [activeFilter, setActiveFilter] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<ViewMode>('all');
-    const [activeTab, setActiveTab] = useState<MainTab>('workspace');
+
+    // View States (Restored from localStorage)
+    const [searchQuery, setSearchQuery] = useState(() => localStorage.getItem('workflow_search') || '');
+    const [activeFilter, setActiveFilter] = useState<string | null>(() => localStorage.getItem('workflow_filter') || null);
+    const [viewMode, setViewMode] = useState<ViewMode>(() => (localStorage.getItem('workflow_view_mode') as ViewMode) || 'all');
+    const [activeTab, setActiveTab] = useState<MainTab>(() => (localStorage.getItem('workflow_tab') as MainTab) || 'workspace');
+
     const [previewIdea, setPreviewIdea] = useState<Idea | null>(null);
     const [commentText, setCommentText] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -30,16 +39,34 @@ export const useWorkspace = () => {
 
     // Initial Load Effect
     useEffect(() => {
-        // Clear legacy storage
-        localStorage.removeItem('workflow_ideas_v3');
+        const restoreSession = async () => {
+            // Restore User from storage (fast)
+            const savedUserStr = localStorage.getItem('workflow_user');
+            if (savedUserStr) {
+                try {
+                    const user = JSON.parse(savedUserStr);
+                    setCurrentUser(user);
+                } catch (e) { console.error(e); }
+            }
 
-        const savedUserStr = localStorage.getItem('workflow_user');
-        if (savedUserStr) {
-            try {
-                const user = JSON.parse(savedUserStr);
-                setCurrentUser(user);
-            } catch (e) { console.error(e); }
-        }
+            // Verify with backend and update details (robust)
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const profile = await getProfile();
+                    setCurrentUser(profile);
+                    localStorage.setItem('workflow_user', JSON.stringify(profile));
+                } catch (e) {
+                    console.error("Session verification failed", e);
+                    // If unauthorized, logout
+                    if (e.message?.includes("401") || e.message?.includes("profile")) {
+                        handleLogout();
+                    }
+                }
+            }
+        };
+
+        restoreSession();
 
         // Check for shareable link
         const urlParams = new URLSearchParams(window.location.search);
@@ -48,6 +75,21 @@ export const useWorkspace = () => {
             (window as any)._pendingShareId = sId;
         }
     }, []);
+
+    // Persist View States
+    useEffect(() => {
+        localStorage.setItem('workflow_tab', activeTab);
+    }, [activeTab]);
+    useEffect(() => {
+        localStorage.setItem('workflow_view_mode', viewMode);
+    }, [viewMode]);
+    useEffect(() => {
+        if (activeFilter) localStorage.setItem('workflow_filter', activeFilter);
+        else localStorage.removeItem('workflow_filter');
+    }, [activeFilter]);
+    useEffect(() => {
+        localStorage.setItem('workflow_search', searchQuery);
+    }, [searchQuery]);
 
     // Data Fetching
     useEffect(() => {
@@ -110,6 +152,11 @@ export const useWorkspace = () => {
     const handleLogout = () => {
         setCurrentUser(null);
         localStorage.removeItem('workflow_user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('workflow_tab');
+        localStorage.removeItem('workflow_view_mode');
+        localStorage.removeItem('workflow_filter');
+        localStorage.removeItem('workflow_search');
     };
 
     const handleAddIdea = async (content: string, imageDatas?: string[]) => {

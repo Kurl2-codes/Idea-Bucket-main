@@ -187,4 +187,15 @@ async def update_user_details(user_id: str, user_update: UserUpdate, current_use
         
     return {"status": "success", "updated_fields": list(update_data.keys())}
 
+@router.get("/me")
+async def get_me(current_user: dict = Depends(get_current_user)):
+    return {
+        "id": current_user["id"],
+        "name": current_user["name"],
+        "email": current_user["email"],
+        "department": current_user["department"],
+        "userLevel": current_user.get("userLevel", 2)
+    }
+
+
 
