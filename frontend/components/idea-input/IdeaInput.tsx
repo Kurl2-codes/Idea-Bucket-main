@@ -45,7 +45,40 @@ const IdeaInput: React.FC<IdeaInputProps> = ({ onAdd, isAnalyzing }) => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Sanitize HTML to remove garbage attributes from copy-paste (e.g. Teams, Word)
+  const sanitizeHTML = (html: string) => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+
+    const walk = (el: Element) => {
+      // Remove unwanted attributes
+      const matchPattern = /^(data-|node|style|class|on)/;
+      const toRemove = [];
+
+      for (let i = 0; i < el.attributes.length; i++) {
+        const { name } = el.attributes[i];
+        if (matchPattern.test(name)) {
+          toRemove.push(name);
+        }
+      }
+
+      toRemove.forEach(name => el.removeAttribute(name));
+
+      // Remove specific tags that we don't want inline (e.g. img - we use attachments)
+      if (el.tagName.toLowerCase() === 'img') {
+        el.remove();
+        return; // Node removed, stop processing this branch
+      }
+
+      Array.from(el.children).forEach(walk);
+    };
+
+    Array.from(div.children).forEach(walk);
+    return div.innerHTML;
+  };
+
   const handlePaste = (e: React.ClipboardEvent) => {
+    // 1. Handle Files (Images)
     const items = e.clipboardData?.items;
     let imageFound = false;
     const files: File[] = [];
@@ -66,18 +99,20 @@ const IdeaInput: React.FC<IdeaInputProps> = ({ onAdd, isAnalyzing }) => {
       e.preventDefault();
       processFiles(files);
 
+      // If we also have text, insert it
       const text = e.clipboardData.getData('text/plain');
       if (text) {
         document.execCommand('insertText', false, text);
       }
-    } else {
-      const html = e.clipboardData.getData('text/html');
-      if (html && html.includes('<img')) {
-        e.preventDefault();
-        const text = e.clipboardData.getData('text/plain');
-        document.execCommand('insertText', false, text);
-      }
+      return;
     }
+
+    // 2. Handle Rich Text (strip mess but keep formatting)
+    // We let default behavior happen for text/html to preserve bold/lists
+    // But we rely on onSubmit to clean it up.
+    // However, if there are images in the HTML that are NOT files (e.g. external links),
+    // we might want to prevent them?
+    // For now, let default paste happen, we sanitize on submit.
 
     setTimeout(checkText, 0);
   };
@@ -106,11 +141,14 @@ const IdeaInput: React.FC<IdeaInputProps> = ({ onAdd, isAnalyzing }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const content = editorRef.current?.innerHTML || '';
+    const rawContent = editorRef.current?.innerHTML || '';
+    const cleanContent = sanitizeHTML(rawContent);
     const plainText = editorRef.current?.innerText || '';
-    
-    if (plainText.trim()) {
-      onAdd(content, previews.length > 0 ? previews : undefined);
+
+    if (plainText.trim() || (previews.length > 0)) {
+      // Use cleanContent instead of rawContent
+      onAdd(cleanContent, previews.length > 0 ? previews : undefined);
+
       if (editorRef.current) editorRef.current.innerHTML = '';
       setPreviews([]);
       setHasText(false);

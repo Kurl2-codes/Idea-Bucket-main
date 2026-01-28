@@ -42,9 +42,6 @@ class S3Service:
             
             self.s3_client.upload_fileobj(file_obj, self.bucket_name, object_name)
             
-            # Return Proxy URL so frontend can load it even if bucket is private
-            # API_URL usually 8000. 
-            # We will create an endpoint /api/v1/images/{filename}
             return f"/api/v1/images/{object_name}"
         except Exception as e:
             print(f"Error uploading base64: {e}")
@@ -71,5 +68,15 @@ class S3Service:
         except Exception as e:
             print(f"Error downloading file: {e}")
             return None
+
+    def delete_file(self, object_name):
+        try:
+            if not self.s3_client:
+                return False
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=object_name)
+            return True
+        except Exception as e:
+            print(f"Error deleting file from S3: {e}")
+            return False
 
 s3_service = S3Service()

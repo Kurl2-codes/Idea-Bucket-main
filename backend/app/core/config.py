@@ -1,4 +1,6 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
+from typing import List, Union, Any
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "IdeaBucket Backend"
@@ -17,9 +19,19 @@ class Settings(BaseSettings):
 
     # Gemini
     GEMINI_API_KEY: str
-    SECRET_KEY: str = "your-secret-key-keep-it-secret"
+    SECRET_KEY: str = "debug-secret-key"
     
-    CORS_ORIGINS: str = "*"
+    # Allow passing as comma-separated string or list
+    CORS_ORIGINS: Any = ["http://localhost:3000", "http://localhost:8000"]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str) and not v.startswith("["):
+            return [i.strip() for i in v.split(",")]
+        elif isinstance(v, (list, str)):
+            return v
+        raise ValueError(v)
 
     class Config:
         env_file = (".env", "../.env")

@@ -7,16 +7,16 @@ from app.db.mongodb import db_instance, get_database
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("DEBUG: Lifespan starting...")
+    # print("DEBUG: Lifespan starting...")
     await db_instance.connect_to_database()
     yield
     await db_instance.close_database_connection()
-    print("DEBUG: Lifespan ending...")
+    # print("DEBUG: Lifespan ending...")
 
 app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
 
 # Set all CORS enabled origins
-origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS else ["*"]
+origins = settings.CORS_ORIGINS
 
 app.add_middleware(
     CORSMiddleware,

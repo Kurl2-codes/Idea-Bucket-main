@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  frontend:
+    container_name: ideabucket-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    container_name: ideabucket-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    # No volume mount for production - code is baked into image
+    env_file:
+      - .env
+    environment:
+      - MONGODB_URL=${MONGODB_URL}
+    depends_on:
+      - mongodb
+    restart: always
+
+  mongodb:
+    container_name: ideabucket-mongodb
+    image: mongo:6.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: always
+
+volumes:
+  mongodb_data:

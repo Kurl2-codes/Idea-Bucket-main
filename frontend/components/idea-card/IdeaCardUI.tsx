@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { Idea } from '../../types';
+import ShimmerImage from '../ui/ShimmerImage';
 
 interface IdeaCardUIProps {
   idea: Idea;
@@ -30,17 +30,18 @@ const IdeaCardUI: React.FC<IdeaCardUIProps> = ({
     >
       {displayImage && (
         <div className="relative h-48 overflow-hidden bg-slate-900">
-          <img
+          <ShimmerImage
             src={displayImage}
             alt={idea.title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            containerClassName="w-full h-full"
           />
           {idea.imageDatas && idea.imageDatas.length > 1 && (
-            <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/60 text-white text-[10px] font-bold">
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/60 text-white text-[10px] font-bold z-10">
               <i className="fas fa-clone mr-1"></i> {idea.imageDatas.length}
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
         </div>
       )}
 

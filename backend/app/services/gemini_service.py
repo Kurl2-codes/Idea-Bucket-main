@@ -8,10 +8,10 @@ class GeminiService:
         
         # Priority list of models to try
         self.model_candidates = [
-            'gemini-2.0-flash-exp',
+            'gemini-flash-latest',
+            'gemini-2.0-flash',
             'gemini-1.5-flash',
-            'gemini-1.5-flash-001',
-            'gemini-1.5-flash-002',
+            'gemini-2.0-flash-exp',
             'gemini-1.5-flash-8b',
         ]
         self.model = None
