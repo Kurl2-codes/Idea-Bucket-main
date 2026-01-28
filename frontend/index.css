@@ -1,0 +1,44 @@
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.7) 25%,
+    rgba(51, 65, 85, 0.7) 50%,
+    rgba(30, 41, 59, 0.7) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* Rich Text Styles */
+.rich-text-content {
+  color: #94a3b8;
+  line-height: 1.6;
+}
+
+.rich-text-content b, .rich-text-content strong {
+  color: #f1f5f9;
+  font-weight: 700;
+}
+
+.rich-text-content i, .rich-text-content em {
+  color: #cbd5e1;
+  font-style: italic;
+}
+
+.rich-text-content p {
+    margin-bottom: 0.75rem;
+}
+
+.rich-text-content p:last-child {
+    margin-bottom: 0;
+}

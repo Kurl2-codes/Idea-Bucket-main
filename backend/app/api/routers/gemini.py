@@ -116,6 +116,7 @@ async def toggle_share(idea_id: str, current_user: dict = Depends(get_current_us
 async def delete_idea(idea_id: str, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     from bson import ObjectId
+    from app.services.s3_service import s3_service
     
     query = {"userId": current_user["id"]}
     if ObjectId.is_valid(idea_id):
@@ -123,10 +124,25 @@ async def delete_idea(idea_id: str, current_user: dict = Depends(get_current_use
     else:
         query["_id"] = idea_id
         
-    result = await db.ideas.delete_one(query)
+    # Find the idea first to get the image URLs
+    idea = await db.ideas.find_one(query)
+    if not idea:
+        raise HTTPException(status_code=404, detail="Idea not found or not owned by you")
+
+    # Delete images from S3
+    image_urls = idea.get("image_urls", [])
+    for url in image_urls:
+        # Example URL: "/api/v1/images/ideas/idea_1737965465_0.png"
+        # We need the key: "ideas/idea_1737965465_0.png"
+        if url.startswith("/api/v1/images/"):
+            s3_key = url.replace("/api/v1/images/", "")
+            print(f"DEBUG: Deleting orphaned image from S3: {s3_key}")
+            s3_service.delete_file(s3_key)
+
+    result = await db.ideas.delete_one({"_id": idea["_id"]})
     
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Idea not found or not owned by you")
+        raise HTTPException(status_code=500, detail="Failed to delete idea from database")
         
     return {"status": "success"}
 @router.post("/ideas/{idea_id}/comments", response_model=Comment)
