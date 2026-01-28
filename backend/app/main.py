@@ -9,6 +9,13 @@ from app.db.mongodb import db_instance, get_database
 async def lifespan(app: FastAPI):
     # print("DEBUG: Lifespan starting...")
     await db_instance.connect_to_database()
+    
+    # Initialize indexes and collections
+    from app.db.init_db import init_db
+    db = await get_database()
+    if db is not None:
+        await init_db(db)
+        
     yield
     await db_instance.close_database_connection()
     # print("DEBUG: Lifespan ending...")
