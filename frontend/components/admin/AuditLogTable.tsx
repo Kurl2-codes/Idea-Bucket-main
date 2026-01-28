@@ -12,7 +12,7 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({ currentUser }) => {
     // Simple URL Sync: In a real app, use useSearchParams from react-router-dom
     // For now, we'll use local state initialized from URL if possible, or just state
     const [page, setPage] = useState(1);
-    const pageSize = 20;
+    const pageSize = 5;
 
     const { data, error, isLoading, mutate } = useSWR<AuditLogResponse>(
         currentUser.userLevel === 1 ? ["audit-logs", page] : null,
@@ -39,117 +39,142 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({ currentUser }) => {
     }
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                <div>
-                    <h2 className="text-lg font-semibold text-gray-900">System Audit Logs</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Track all critical system actions.
-                    </p>
-                </div>
-                <button
-                    onClick={() => mutate()}
-                    className="p-2 text-gray-500 hover:text-blue-600 transition-colors"
-                    title="Refresh"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                </button>
+        <div className="p-8 animate-in fade-in duration-500">
+            <div className="mb-8">
+                <h2 className="text-3xl font-black text-slate-100 mb-2">System Audit Logs</h2>
+                <p className="text-slate-400 text-sm">Track all critical system actions.</p>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                    <thead>
-                        <tr className="bg-gray-50 text-gray-600 text-sm border-b border-gray-100">
-                            <th className="px-6 py-4 font-medium">Timestamp</th>
-                            <th className="px-6 py-4 font-medium">Action</th>
-                            <th className="px-6 py-4 font-medium">Actor</th>
-                            <th className="px-6 py-4 font-medium">Target</th>
-                            <th className="px-6 py-4 font-medium">Details</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {isLoading ? (
-                            [...Array(5)].map((_, i) => (
-                                <tr key={i} className="animate-pulse">
-                                    <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-32"></div></td>
-                                    <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-24"></div></td>
-                                    <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-32"></div></td>
-                                    <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-32"></div></td>
-                                    <td className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-48"></div></td>
-                                </tr>
-                            ))
-                        ) : data?.items.length === 0 ? (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                                    No audit logs found.
-                                </td>
+            <div className="glass rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl">
+                <div className="p-6 border-b border-white/5 flex justify-between items-center bg-slate-900/50">
+                    <div>
+                        {/* Optional extra header info or filters could go here */}
+                    </div>
+                    <button
+                        onClick={() => mutate()}
+                        className="p-2 text-slate-400 hover:text-blue-400 transition-colors bg-slate-800/50 rounded-lg"
+                        title="Refresh"
+                    >
+                        <i className="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-900/50 border-b border-white/5">
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#fd7912]">Timestamp</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#fd7912]">Action</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#fd7912]">Actor</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#fd7912]">Target</th>
+                                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-[#fd7912]">Details</th>
                             </tr>
-                        ) : (
-                            data?.items.map((log, index) => (
-                                <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 text-sm text-gray-500 font-mono">
-                                        {dayjs(log.timestamp).format("MMM D, HH:mm:ss")}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                                ${getActionColor(log.action)}
-                            `}>
-                                            {log.action}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-900">
-                                        <div className="font-medium">{log.actor.name}</div>
-                                        <div className="text-xs text-gray-500">{log.actor.id}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-900">
-                                        {log.target.name || "N/A"}
-                                        {log.target.id && <div className="text-xs text-gray-500">{log.target.id}</div>}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 font-mono text-xs">
-                                        <pre className="whitespace-pre-wrap max-w-xs">{JSON.stringify(log.details, null, 2)}</pre>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {isLoading ? (
+                                [...Array(5)].map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td className="px-6 py-4"><div className="h-4 bg-slate-800 rounded w-32"></div></td>
+                                        <td className="px-6 py-4"><div className="h-4 bg-slate-800 rounded w-24"></div></td>
+                                        <td className="px-6 py-4"><div className="h-4 bg-slate-800 rounded w-32"></div></td>
+                                        <td className="px-6 py-4"><div className="h-4 bg-slate-800 rounded w-32"></div></td>
+                                        <td className="px-6 py-4"><div className="h-4 bg-slate-800 rounded w-48"></div></td>
+                                    </tr>
+                                ))
+                            ) : data?.items.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                                        No audit logs found.
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Pagination Footer */}
-            {data && (
-                <div className="p-4 border-t border-gray-100 flex items-center justify-between bg-gray-50">
-                    <div className="text-sm text-gray-500">
-                        Page <span className="font-medium text-gray-900">{data.meta.page}</span> of <span className="font-medium text-gray-900">{data.meta.pages}</span> <span className="mx-1">•</span> Total <span className="font-medium text-gray-900">{data.meta.total}</span> logs
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={handlePrev}
-                            disabled={!data.meta.has_prev}
-                            className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            Previous
-                        </button>
-                        <button
-                            onClick={handleNext}
-                            disabled={!data.meta.has_next}
-                            className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        >
-                            Next
-                        </button>
-                    </div>
+                            ) : (
+                                data?.items.map((log, index) => (
+                                    <tr key={index} className="hover:bg-white/5 transition-colors group">
+                                        <td className="px-6 py-4 text-sm text-slate-400 font-mono">
+                                            {dayjs(log.timestamp).format("MMM D, HH:mm:ss")}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border
+                                    ${getActionColor(log.action)}
+                                `}>
+                                                {log.action}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-slate-200">
+                                            <div className="font-bold">{log.actor.name}</div>
+                                            <div className="text-[11px] text-slate-500">{log.actor.id}</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-slate-200">
+                                            {log.target.name || "N/A"}
+                                            {log.target.id && <div className="text-[11px] text-slate-500">{log.target.id}</div>}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-slate-500 font-mono text-xs">
+                                            <span className="text-slate-300">{formatDetails(log.details)}</span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-            )}
+
+                {/* Pagination Footer */}
+                {data && (
+                    <div className="p-4 border-t border-white/5 flex items-center justify-between bg-slate-900/30">
+                        <div className="text-sm text-slate-500">
+                            Page <span className="font-medium text-slate-300">{data.meta.page}</span> of <span className="font-medium text-slate-300">{data.meta.pages}</span> <span className="mx-1">•</span> Total <span className="font-medium text-slate-300">{data.meta.total}</span> logs
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handlePrev}
+                                disabled={!data.meta.has_prev}
+                                className="px-4 py-2 text-sm font-bold text-slate-300 bg-slate-800 border border-white/10 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={handleNext}
+                                disabled={!data.meta.has_next}
+                                className="px-4 py-2 text-sm font-bold text-slate-300 bg-slate-800 border border-white/10 rounded-lg hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                Next
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
+const formatDetails = (details: any) => {
+    if (!details || Object.keys(details).length === 0) return "N/A";
+
+    // Handle specific fields for better readability
+    const parts = [];
+
+    if (details.newLevel !== undefined) {
+        parts.push(`Role → ${details.newLevel === 1 ? 'Admin' : 'User'}`);
+    }
+
+    // Generic formatted list for other keys
+    Object.entries(details).forEach(([key, value]) => {
+        if (key === 'newLevel') return; // Handled above
+        if (key === 'password') return; // Hide specific sensitive fields if any
+
+        // Format key names to be nicer (e.g. "ideaId" -> "Idea ID")
+        const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        parts.push(`${formattedKey}: ${value}`);
+    });
+
+    return parts.join(" • ");
+};
+
 const getActionColor = (action: string) => {
-    if (action.includes("create") || action.includes("register") || action.includes("added")) return "bg-green-50 text-green-700 border-green-200";
-    if (action.includes("updated") || action.includes("shared") || action.includes("link")) return "bg-blue-50 text-blue-700 border-blue-200";
-    if (action.includes("deleted") || action.includes("remove") || action.includes("unshared")) return "bg-red-50 text-red-700 border-red-200";
-    return "bg-gray-50 text-gray-700 border-gray-200";
+    if (action.includes("create") || action.includes("register") || action.includes("added")) return "text-emerald-400 bg-emerald-400/10 border-emerald-400/20";
+    if (action.includes("updated") || action.includes("shared") || action.includes("link")) return "text-blue-400 bg-blue-400/10 border-blue-400/20";
+    if (action.includes("deleted") || action.includes("remove") || action.includes("unshared")) return "text-rose-400 bg-rose-400/10 border-rose-400/20";
+    return "text-slate-400 bg-slate-400/10 border-slate-400/20";
 };
 
 export default AuditLogTable;

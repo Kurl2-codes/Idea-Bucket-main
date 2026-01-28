@@ -111,6 +111,7 @@ const App: React.FC = () => {
           visibleIdeas={visibleIdeas}
           ideas={ideas}
           isAnalyzing={isAnalyzing}
+          currentUser={currentUser}
           currentUserId={currentUser.id}
           onAdd={handleAddIdea}
           onDelete={handleDeleteIdea}

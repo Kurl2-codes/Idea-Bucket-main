@@ -3,7 +3,7 @@ import IdeaInput from '../idea-input/IdeaInput';
 import IdeaCard from '../idea-card/IdeaCard';
 import AuditLogTable from '../admin/AuditLogTable';
 import AdminDashboard from '../admin/AdminDashboard';
-import { Idea, MainTab, ViewMode } from '../../types';
+import { Idea, MainTab, ViewMode, User } from '../../types';
 
 interface WorkspaceViewProps {
     activeTab: MainTab;
@@ -18,6 +18,7 @@ interface WorkspaceViewProps {
     onToggleShare: (id: string) => void;
     onPreview: (idea: Idea) => void;
     onSetActiveTab: (tab: MainTab) => void;
+    currentUser: User;
 }
 
 const WorkspaceView: React.FC<WorkspaceViewProps> = ({
@@ -32,7 +33,8 @@ const WorkspaceView: React.FC<WorkspaceViewProps> = ({
     onDelete,
     onToggleShare,
     onPreview,
-    onSetActiveTab
+    onSetActiveTab,
+    currentUser
 }) => {
     return (
         <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12">
@@ -75,6 +77,8 @@ const WorkspaceView: React.FC<WorkspaceViewProps> = ({
                 </div>
             ) : activeTab === 'admin' ? (
                 <AdminDashboard />
+            ) : activeTab === 'audit' ? (
+                <AuditLogTable currentUser={currentUser} />
             ) : (
                 <div className="animate-in fade-in duration-500">
                     <div className="mb-8 flex items-center justify-between">
