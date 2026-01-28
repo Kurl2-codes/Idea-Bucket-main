@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi_limiter.depends import RateLimiter
 from app.db.mongodb import get_database
 from app.core.security import verify_password, create_access_token, get_password_hash
 from app.services.audit_service import audit_service
@@ -22,8 +23,14 @@ class Token(BaseModel):
     token_type: str
     user: dict
 
-@router.post("/register", response_model=Token)
-async def register(user: UserCreate, background_tasks: BackgroundTasks):
+@router.post(
+    "/register",
+    response_model=Token,
+    summary="Register a new user",
+    description="Creates a new user account and sets a secure HttpOnly cookie. Performs an initial audit log entry.",
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))]
+)
+async def register(user: UserCreate, response: Response, background_tasks: BackgroundTasks):
     try:
         db = await get_database()
         if db is None:
@@ -57,6 +64,18 @@ async def register(user: UserCreate, background_tasks: BackgroundTasks):
             details={"department": new_user["department"], "user_level": new_user["user_level"]} if "user_level" in new_user else {"department": new_user["department"], "user_level": 2}
         )
         # Note: Fix field name if userLevel is used instead of user_level
+        access_token = create_access_token(data={"sub": user.email})
+        
+        # Set HttpOnly Cookie
+        response.set_cookie(
+            key="access_token",
+            value=f"Bearer {access_token}",
+            httponly=True,
+            secure=True, # Should be True in production
+            samesite="lax",
+            max_age=1800 # 30 mins
+        )
+
         return {
             "access_token": access_token, 
             "token_type": "bearer", 
@@ -72,8 +91,14 @@ async def register(user: UserCreate, background_tasks: BackgroundTasks):
         print(f"Register Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+@router.post(
+    "/token",
+    response_model=Token,
+    summary="Login for access token",
+    description="Authenticates a user and issues a JWT stored in a secure HttpOnly cookie.",
+    dependencies=[Depends(RateLimiter(times=10, seconds=60))]
+)
+async def login_for_access_token(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     db = await get_database()
     user = await db.users.find_one({"email": form_data.username})
     if not user or not verify_password(form_data.password, user["hashed_password"]):
@@ -83,6 +108,17 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user["email"]})
+    
+    # Set HttpOnly Cookie
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {access_token}",
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=1800
+    )
+
     return {
         "access_token": access_token, 
         "token_type": "bearer", 
@@ -97,10 +133,18 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    # Simple decoding for now - real app should verify signature properly with jose
-    # But since we use same secret, we can reuse logic or just trust for this prototype if verified elsewhere
-    # Proper way:
+async def get_current_user(request: Request):
+    token = request.cookies.get("access_token")
+    if not token or not token.startswith("Bearer "):
+        # Fallback to Header for API/Mobile compatibility or easier dev
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header
+        else:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = token.replace("Bearer ", "")
+    
     from jose import jwt, JWTError
     from app.core.config import settings
     
@@ -119,7 +163,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         
     return user
 
-@router.get("/users")
+@router.get(
+    "/users",
+    summary="List all users",
+    description="Returns a list of all registered users. Requires Admin privileges."
+)
 async def list_users(current_user: dict = Depends(get_current_user)):
     if current_user.get("userLevel") != 1:
         raise HTTPException(status_code=403, detail="Not authorized. Admin only.")
@@ -230,7 +278,11 @@ async def update_user_details(user_id: str, user_update: UserUpdate, background_
         
     return {"status": "success", "updated_fields": list(update_data.keys())}
 
-@router.get("/me")
+@router.get(
+    "/me",
+    summary="Get current user profile",
+    description="Returns details about the currently authenticated user."
+)
 async def get_me(current_user: dict = Depends(get_current_user)):
     return {
         "id": current_user["id"],
@@ -239,6 +291,15 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         "department": current_user["department"],
         "userLevel": current_user.get("userLevel", 2)
     }
+
+@router.post(
+    "/logout",
+    summary="Logout user",
+    description="Clears the authentication cookie."
+)
+async def logout(response: Response):
+    response.delete_cookie("access_token")
+    return {"status": "success"}
 
 
 

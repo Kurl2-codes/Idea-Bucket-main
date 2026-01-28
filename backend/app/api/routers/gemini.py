@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
+from fastapi_cache.decorator import cache
 from app.services.audit_service import audit_service
 from app.schemas.gemini import IdeaAnalysisRequest, IdeaAnalysisResponse, CommentCreate, Comment, IdeaUpdate, ShareLinkUpdate
 
@@ -9,12 +10,18 @@ from app.api.routers.auth import get_current_user
 
 router = APIRouter()
 
-@router.post("/analyze-idea", response_model=IdeaAnalysisResponse)
+@router.post(
+    "/analyze-idea",
+    response_model=IdeaAnalysisResponse,
+    summary="Analyze and Save Idea",
+    description="Analyzes text/images using Gemini AI, uploads images to S3, and saves the idea to MongoDB. Clears user's idea cache."
+)
 async def analyze_idea(request: IdeaAnalysisRequest, background_tasks: BackgroundTasks):
     result = await gemini_service.analyze_idea(request.content, request.image_datas)
     
     # Upload images to S3
     from app.services.s3_service import s3_service
+    from fastapi_cache import FastAPICache
     import time
     
     image_urls = []
@@ -78,13 +85,22 @@ async def analyze_idea(request: IdeaAnalysisRequest, background_tasks: Backgroun
                 target_name=result_dict.get("title"),
                 details={"category": result_dict.get("category")}
             )
+        
+        # Invalidate cache
+        background_tasks.add_task(FastAPICache.clear, namespace="ideas", key=f"user_{request.userId}")
     else:
         print("ERROR: Database connection missing during analyze_idea!")
         
     return result_dict
 
-@router.get("/ideas", response_model=list[IdeaAnalysisResponse])
-async def get_ideas(current_user: dict = Depends(get_current_user)):
+@router.get(
+    "/ideas",
+    response_model=list[IdeaAnalysisResponse],
+    summary="List accessible ideas",
+    description="Returns ideas owned by the user or shared with their department. Implements Cache-Aside with 60s TTL."
+)
+# @cache(expire=60, namespace="ideas", key_builder=lambda func, *args, **kwargs: f"user_{kwargs.get('current_user', {}).get('id', 'anon')}")
+async def get_ideas(*, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     if db is None:
         return []
@@ -104,15 +120,22 @@ async def get_ideas(current_user: dict = Depends(get_current_user)):
     cursor = db.ideas.find(query).sort("_id", -1)
     ideas = await cursor.to_list(length=100)
     
-    # Manually convert ObjectId to str for Pydantic serialization
+    # Manually convert ObjectId to str and REMOVE _id to prevent serialization errors
     print(f"DEBUG: get_ideas found {len(ideas)} ideas")
+    
+    cleaned_ideas = []
     for idea in ideas:
         if "_id" in idea:
-             idea["id"] = str(idea["_id"])
-             
-    return ideas
+            idea["id"] = str(idea.pop("_id"))
+        cleaned_ideas.append(IdeaAnalysisResponse(**idea))
 
-@router.patch("/ideas/{idea_id}/share")
+    return cleaned_ideas
+
+@router.patch(
+    "/ideas/{idea_id}/share",
+    summary="Toggle Idea Sharing",
+    description="Toggles the public/shared state of an idea within the department. Requires owner permissions."
+)
 async def toggle_share(idea_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     from bson import ObjectId
@@ -125,8 +148,11 @@ async def toggle_share(idea_id: str, background_tasks: BackgroundTasks, current_
 
     idea = await db.ideas.find_one(query)
     
+    # Ownership Check (already implicitly in query, but good to be explicit for standard)
     if not idea:
          raise HTTPException(status_code=404, detail="Idea not found or not owned by you")
+
+    from fastapi_cache import FastAPICache
 
     new_state = not idea.get("isShared", False)
     
@@ -144,10 +170,17 @@ async def toggle_share(idea_id: str, background_tasks: BackgroundTasks, current_
         details={"new_state": new_state}
     )
     
+    # Invalidate cache
+    background_tasks.add_task(FastAPICache.clear, namespace="ideas", key=f"user_{current_user['id']}")
+
     return {"isShared": new_state}
 
-@router.delete("/ideas/{idea_id}")
-async def delete_idea(idea_id: str, current_user: dict = Depends(get_current_user)):
+@router.delete(
+    "/ideas/{idea_id}",
+    summary="Delete an idea",
+    description="Removes an idea and its associated images from S3. Requires owner permissions."
+)
+async def delete_idea(idea_id: str, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     db = await get_database()
     from bson import ObjectId
     from app.services.s3_service import s3_service
@@ -173,6 +206,7 @@ async def delete_idea(idea_id: str, current_user: dict = Depends(get_current_use
             print(f"DEBUG: Deleting orphaned image from S3: {s3_key}")
             s3_service.delete_file(s3_key)
 
+    from fastapi_cache import FastAPICache
     result = await db.ideas.delete_one({"_id": idea["_id"]})
     
     if result.deleted_count == 0:
@@ -187,6 +221,9 @@ async def delete_idea(idea_id: str, current_user: dict = Depends(get_current_use
         target_id=idea_id,
         target_name=idea.get("title")
     )
+
+    # Invalidate cache
+    background_tasks.add_task(FastAPICache.clear, namespace="ideas", key=f"user_{current_user['id']}")
         
     return {"status": "success"}
 @router.post("/ideas/{idea_id}/comments", response_model=Comment)

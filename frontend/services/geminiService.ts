@@ -14,6 +14,7 @@ export const analyzeIdea = async (
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({
         id,
         content,
@@ -44,6 +45,7 @@ export const analyzeIdea = async (
 };
 
 const getAuthHeader = () => {
+  // Legacy support for manual tokens - will be ignored by backend if HttpOnly cookie is present
   const token = localStorage.getItem('token');
   return token ? { "Authorization": `Bearer ${token}` } : {};
 };
@@ -53,7 +55,8 @@ export const getIdeas = async (): Promise<IdeaAnalysis[]> => {
     const response = await fetch(`${API_URL}/api/v1/gemini/ideas`, {
       headers: {
         ...getAuthHeader()
-      }
+      },
+      credentials: "include"
     });
     if (!response.ok) throw new Error("Failed to fetch ideas");
     return await response.json();
@@ -70,7 +73,8 @@ export const toggleShare = async (ideaId: string): Promise<{ isShared: boolean }
       headers: {
         'Content-Type': 'application/json',
         ...getAuthHeader()
-      }
+      },
+      credentials: "include"
     });
     if (!response.ok) throw new Error("Failed to toggle share");
     return await response.json();
@@ -167,6 +171,7 @@ export const updateIdea = async (
         "Content-Type": "application/json",
         ...getAuthHeader()
       },
+      credentials: "include",
       body: JSON.stringify({ content, title, category, tags })
     });
 
@@ -190,6 +195,7 @@ export const updateShareLink = async (
         "Content-Type": "application/json",
         ...getAuthHeader()
       },
+      credentials: "include",
       body: JSON.stringify({ shareLinkId, sharePermission })
     });
 

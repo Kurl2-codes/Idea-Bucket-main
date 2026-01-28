@@ -10,6 +10,18 @@ class IdeaAnalysisRequest(BaseModel):
     authorName: str
     authorDepartment: str
 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "id": "65b2f1...",
+                "content": "A solar powered drone for agriculture.",
+                "imageDatas": ["base64..."],
+                "userId": "user@example.com",
+                "authorName": "John Doe",
+                "authorDepartment": "Engineering"
+            }
+        }
+
 class IdeaAnalysisResponse(BaseModel):
     title: str
     category: str
@@ -26,6 +38,19 @@ class IdeaAnalysisResponse(BaseModel):
     comments: List['Comment'] = []
     shareLinkId: Optional[str] = None
     sharePermission: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "title": "Solar Ag-DRONE",
+                "category": "Sustainability",
+                "tags": ["solar", "agriculture"],
+                "id": "65b2f1...",
+                "userId": "user@example.com",
+                "isShared": False,
+                "createdAt": 1700000000
+            }
+        }
 
 class Comment(BaseModel):
     id: str
@@ -46,8 +71,26 @@ class IdeaUpdate(BaseModel):
     category: Optional[str] = None
     tags: Optional[List[str]] = None
 
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "content": "Updated content with more detail.",
+                "title": "New Title",
+                "category": "Tech",
+                "tags": ["updated", "tags"]
+            }
+        }
+
 class ShareLinkUpdate(BaseModel):
     shareLinkId: str
     sharePermission: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "shareLinkId": "xyz-789",
+                "sharePermission": "viewer"
+            }
+        }
 
 

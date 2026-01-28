@@ -4,6 +4,10 @@ from app.core.config import settings
 from app.api.routers import gemini, auth, images
 from contextlib import asynccontextmanager
 from app.db.mongodb import db_instance, get_database
+import redis.asyncio as redis
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from fastapi_limiter import FastAPILimiter
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -15,12 +19,24 @@ async def lifespan(app: FastAPI):
     db = await get_database()
     if db is not None:
         await init_db(db)
+    
+    # Initialize Redis for Caching and Rate Limiting
+    redis_client = redis.from_url(settings.REDIS_URL, encoding="utf8", decode_responses=True)
+    FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
+    await FastAPILimiter.init(redis_client)
+    
+    print("SUCCESS: Redis Caching and Rate Limiting initialized.")
         
     yield
     await db_instance.close_database_connection()
     # print("DEBUG: Lifespan ending...")
 
-app = FastAPI(title=settings.PROJECT_NAME, lifespan=lifespan)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    lifespan=lifespan,
+    description="Professional API for Idea Management. Implements SWR caching, Redis-based rate limiting, and HttpOnly security standards.",
+    version="1.0.0"
+)
 
 # Set all CORS enabled origins
 origins = settings.CORS_ORIGINS

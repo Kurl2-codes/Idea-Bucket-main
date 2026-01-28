@@ -24,6 +24,7 @@ export const login = async (email: string, password: string): Promise<AuthRespon
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
+        credentials: 'include',
         body: formData,
     });
 
@@ -41,6 +42,7 @@ export const register = async (name: string, email: string, password: string, de
         headers: {
             'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ name, email, password, department, userLevel: 2 }),
     });
 
@@ -53,6 +55,7 @@ export const register = async (name: string, email: string, password: string, de
 };
 
 const getAuthHeader = () => {
+    // Legacy support for manual tokens - will be ignored by backend if HttpOnly cookie is present
     const token = localStorage.getItem('token');
     return token ? { "Authorization": `Bearer ${token}` } : {};
 };
@@ -61,7 +64,8 @@ export const getUsers = async (): Promise<User[]> => {
     const response = await fetch(`${API_URL}/api/v1/auth/users`, {
         headers: {
             ...getAuthHeader()
-        }
+        },
+        credentials: 'include'
     });
 
     if (!response.ok) throw new Error('Failed to fetch users');
@@ -73,7 +77,8 @@ export const updateUserLevel = async (userId: string, level: number): Promise<an
         method: 'PATCH',
         headers: {
             ...getAuthHeader()
-        }
+        },
+        credentials: 'include'
     });
 
     if (!response.ok) throw new Error('Failed to update user level');
@@ -85,7 +90,8 @@ export const deleteUser = async (userId: string): Promise<any> => {
         method: 'DELETE',
         headers: {
             ...getAuthHeader()
-        }
+        },
+        credentials: 'include'
     });
 
     if (!response.ok) throw new Error('Failed to delete user');
@@ -99,6 +105,7 @@ export const updateUserDetails = async (userId: string, data: Partial<User> & { 
             'Content-Type': 'application/json',
             ...getAuthHeader()
         },
+        credentials: 'include',
         body: JSON.stringify(data),
     });
 

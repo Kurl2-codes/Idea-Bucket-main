@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     
     # MongoDB
     MONGODB_URL: str
+    REDIS_URL: str = "redis://redis:6379"
     DATABASE_NAME: str = "ideabucket"
 
     # S3 Object Storage

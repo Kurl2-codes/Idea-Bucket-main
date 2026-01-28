@@ -42,7 +42,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignup, onToggleLogin }) => {
 
     try {
       const response = await register(name, email, password, department);
-      localStorage.setItem('token', response.access_token);
+      // Backend handles the HttpOnly cookie. We no longer store the token in localStorage.
       onSignup(response.user);
     } catch (error: any) {
       setError(error.message || "Registration failed");

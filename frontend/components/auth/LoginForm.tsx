@@ -22,7 +22,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLogin, onToggleSignUp }) => {
 
     try {
       const response = await login(email, password);
-      localStorage.setItem('token', response.access_token);
+      // Backend handles the HttpOnly cookie. We no longer store the token in localStorage.
       onLogin(response.user);
     } catch (error: any) {
       setError(error.message || "Login failed");

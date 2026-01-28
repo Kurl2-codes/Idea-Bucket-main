@@ -24,12 +24,18 @@ async def init_db(db: AsyncIOMotorDatabase):
         await db.ideas.create_index([("userId", pymongo.ASCENDING)])
         print("SUCCESS: Index on ideas.userId ensured.")
 
-        # Index for shared ideas within department
+        # Index for sharing (isShared, authorDepartment) ensured.
         await db.ideas.create_index([
             ("isShared", pymongo.ASCENDING),
             ("authorDepartment", pymongo.ASCENDING)
         ])
         print("SUCCESS: Index on sharing (isShared, authorDepartment) ensured.")
+
+        # Audit Logs Collection
+        await db.audit_logs.create_index([("timestamp", pymongo.DESCENDING)])
+        # TTL Index: Delete logs after 90 days (7776000 seconds)
+        await db.audit_logs.create_index([("timestamp", pymongo.ASCENDING)], expireAfterSeconds=7776000)
+        print("SUCCESS: Indexes and TTL on audit_logs ensured.")
 
     except Exception as e:
         print(f"WARNING: Error during database initialization: {e}")
