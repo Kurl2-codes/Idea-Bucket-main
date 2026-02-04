@@ -6,7 +6,6 @@ class GeminiService:
     def __init__(self):
         genai.configure(api_key=settings.GEMINI_API_KEY)
         
-        # Priority list of models to try
         self.model_candidates = [
             'gemini-flash-latest',
             'gemini-2.0-flash',
